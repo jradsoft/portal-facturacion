@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Factura tu compra · Kiosco Express</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#edf1f0;--surf:#fff;--ink:#12201f;--mute:#5d6d6b;--line:#cfd9d7;--brand:#0f5c5a;--brandink:#fff;--acc:#ff6b2c;--accink:#1a0a02;--ok:#12794b;--err:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1716;--surf:#16231f;--ink:#e8f1ef;--mute:#9bb0ac;--line:#2a3d39;--brand:#4fc3bd;--brandink:#06201e;--acc:#ff8a54;--ok:#5fd39c;--err:#ff8b84;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1716;--surf:#16231f;--ink:#e8f1ef;--mute:#9bb0ac;--line:#2a3d39;--brand:#4fc3bd;--brandink:#06201e;--acc:#ff8a54;--ok:#5fd39c;--err:#ff8b84;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:var(--brand);color:var(--brandink)}
+header h1{margin:0;font-size:1.25rem;font-weight:800}
+.steps{display:flex;gap:8px;font-size:.9rem}
+.steps span{padding:4px 12px;border-radius:99px;border:1.5px solid currentColor;opacity:.55}
+.steps span.on{opacity:1;background:var(--brandink);color:var(--brand)}
+main{max-width:640px;margin:0 auto;padding:20px}
+.card{background:var(--surf);border:1.5px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:12px}
+.card h2{margin:0;font-size:1.3rem}
+.card p{margin:0;color:var(--mute)}
+label{display:grid;gap:4px;font-weight:600;font-size:.95rem}
+input,select{padding:12px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);width:100%;min-height:46px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err{color:var(--err);font-weight:400;font-size:.88rem;min-height:1.1em}
+.msg{color:var(--err);font-weight:600}
+.btn{width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:var(--accink);font-weight:800;font-size:1.05rem;cursor:pointer;min-height:48px}
+.btn.sec{background:none;border:1.5px solid var(--line);color:var(--ink);font-weight:600}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;font-size:.88rem;color:var(--mute)}
+.demo button{padding:8px 12px;border-radius:99px;border:1.5px dashed var(--line);background:none;cursor:pointer;min-height:40px}
+.tk{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:10px;background:var(--bg);flex-wrap:wrap}
+.tk small{display:block;color:var(--mute)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+.sum{margin-left:auto;width:240px}
+.sum div{display:flex;justify-content:space-between;padding:2px 0}
+.sum .g{font-weight:800;font-size:1.2rem;border-top:2px solid var(--ink);margin-top:4px;padding-top:6px}
+.ok{color:var(--ok);font-weight:800}
+small.u{color:var(--mute);word-break:break-all;display:block}
+.hd{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:12px}
+.acts{display:flex;gap:10px;margin-top:14px}
+.note{color:var(--mute);font-size:.85rem;margin-top:14px}
+@media (max-width:520px){.row{grid-template-columns:1fr}.steps span:not(.on){display:none}}
+@media print{header,.acts,.note{display:none}body{background:#fff;color:#000}.card{border:0}}
+</style>
+</head>
+<body>
+<header><h1>Kiosco Express · Facturación</h1><div class="steps" id="steps"></div></header>
+<main id="app"></main>
+<script>
+const IVA=0.16;
+/* Simula la consulta al sistema de escritorio: en producción se reemplaza por una llamada a tu API. */
+const DB={
+"T-10234":{fecha:"24/11/2026",fact:false,items:[["Café americano",2,32],["Torta de jamón",1,55],["Galletas",1,18]]},
+"T-10235":{fecha:"25/11/2026",fact:false,items:[["Hot dog",2,35],["Refresco",2,22]]},
+"T-10199":{fecha:"20/11/2026",fact:true,items:[["Ensalada",1,60],["Tamal",1,25]]}};
+const REG={"601":"General de Ley Personas Morales","612":"Personas Físicas con Actividades Empresariales","616":"Sin obligaciones fiscales","626":"Régimen Simplificado de Confianza"};
+const S={view:"tk",folio:"",monto:"",msg:"",t:null,err:{},fac:null,f:{rfc:"",nom:"",cp:"",reg:"601",uso:"G03",mail:""}};
+const $=s=>document.querySelector(s);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const m=n=>n.toLocaleString("es-MX",{style:"currency",currency:"MXN"});
+const tot=t=>t.items.reduce((a,i)=>a+i[1]*i[2],0);
+function steps(){const v=["tk","fiscal","fac"],l=["1 Ticket","2 Datos fiscales","3 Factura"];
+$("#steps").innerHTML=l.map((t,i)=>`<span class="${v[i]==S.view?"on":""}">${t}</span>`).join("")}
+function demo(f,a){S.folio=f;S.monto=a;S.msg="";render()}
+function tk(){return `<div class="card"><h2>Factura tu compra</h2>
+<p>Escribe el folio y el total tal como aparecen en tu ticket.</p>
+<label>Folio del ticket<input id="folio" value="${esc(S.folio)}" autocapitalize="characters" placeholder="T-10234"></label>
+<label>Total pagado<input id="monto" value="${esc(S.monto)}" inputmode="decimal" placeholder="137.00"></label>
+<div class="msg" role="alert">${S.msg}</div>
+<button class="btn" onclick="buscar()">Buscar mi ticket</button></div>
+<div class="demo">Tickets de prueba:
+<button onclick="demo('T-10234','137.00')">T-10234 · $137.00</button>
+<button onclick="demo('T-10235','114.00')">T-10235 · $114.00</button>
+<button onclick="demo('T-10199','85.00')">T-10199 · ya facturado</button></div>`}
+function buscar(){
+S.folio=$("#folio").value.trim().toUpperCase();S.monto=$("#monto").value.trim();
+const t=DB[S.folio],a=parseFloat(S.monto.replace(/[$,]/g,""));
+if(!t||isNaN(a)||Math.abs(tot(t)-a)>0.009){S.msg="No encontramos un ticket con ese folio y total. Revisa que coincidan con tu ticket.";render();return}
+if(t.fact){S.msg="Este ticket ya fue facturado. Busca la factura en el correo que usaste al emitirla.";render();return}
+S.msg="";S.t=t;S.view="fiscal";render()}
+function fiscal(){const f=S.f,e=S.err,t=S.t;
+return `<div class="card"><h2>Tus datos fiscales</h2>
+<div class="tk"><div><b>${esc(S.folio)}</b><small>${t.fecha}</small></div><b>${m(tot(t))}</b></div>
+<label>RFC<input id="rfc" value="${esc(f.rfc)}" maxlength="13" autocapitalize="characters" placeholder="XAXX010101000"><span class="err">${e.rfc||""}</span></label>
+<label>Nombre o razón social<input id="nom" value="${esc(f.nom)}" autocomplete="organization"><span class="err">${e.nom||""}</span></label>
+<div class="row"><label>Código postal fiscal<input id="cp" value="${esc(f.cp)}" maxlength="5" inputmode="numeric" autocomplete="postal-code"><span class="err">${e.cp||""}</span></label>
+<label>Régimen fiscal<select id="reg">${Object.entries(REG).map(([k,v])=>`<option value="${k}" ${f.reg==k?"selected":""}>${k} · ${v}</option>`).join("")}</select></label></div>
+<label>Uso de la factura<select id="uso"><option value="G03" ${f.uso=="G03"?"selected":""}>G03 · Gastos en general</option><option value="G01" ${f.uso=="G01"?"selected":""}>G01 · Adquisición de mercancías</option><option value="S01" ${f.uso=="S01"?"selected":""}>S01 · Sin efectos fiscales</option></select></label>
+<label>Correo para recibirla<input id="mail" type="email" value="${esc(f.mail)}" autocomplete="email"><span class="err">${e.mail||""}</span></label>
+<button class="btn" onclick="emitir()">Emitir factura</button>
+<button class="btn sec" onclick="S.view='tk';render()">Cambiar de ticket</button></div>`}
+function emitir(){const f=S.f;
+f.rfc=$("#rfc").value.trim().toUpperCase();f.nom=$("#nom").value.trim();f.cp=$("#cp").value.trim();f.reg=$("#reg").value;f.uso=$("#uso").value;f.mail=$("#mail").value.trim();
+const e=S.err={};
+if(!/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(f.rfc))e.rfc="Escribe un RFC válido de 12 o 13 caracteres.";
+if(f.nom.length<3)e.nom="Escribe tu nombre o razón social.";
+if(!/^\d{5}$/.test(f.cp))e.cp="Escribe 5 dígitos.";
+if(!/^\S+@\S+\.\S+$/.test(f.mail))e.mail="Escribe un correo válido.";
+if(Object.keys(e).length){render();return}
+const t=S.t,T=tot(t),sub=T/(1+IVA);
+S.fac={folio:"F-"+String(Math.floor(Math.random()*9000)+1000),tk:S.folio,uuid:crypto.randomUUID().toUpperCase(),fecha:new Date().toLocaleString("es-MX"),items:t.items,sub,iva:T-sub,tot:T,f:{...f}};
+t.fact=true;S.view="fac";render()}
+function fac(){const x=S.fac,f=x.f;
+return `<div class="card"><div class="hd"><div><h2>Factura electrónica</h2><small class="u">Kiosco Express · RFC KEX010101AB1</small></div><div style="text-align:right"><b>${x.folio}</b><small class="u">${x.fecha}</small></div></div>
+<p style="color:inherit"><b>${esc(f.nom)}</b><small class="u">RFC ${esc(f.rfc)} · CP ${esc(f.cp)} · Régimen ${esc(f.reg)} · Uso ${esc(f.uso)}</small></p>
+<table><thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Importe</th></tr></thead><tbody>
+${x.items.map(i=>`<tr><td>${i[0]}</td><td>${i[1]}</td><td>${m(i[2])}</td><td>${m(i[1]*i[2])}</td></tr>`).join("")}</tbody></table>
+<div class="sum"><div><span>Subtotal</span><span>${m(x.sub)}</span></div><div><span>IVA 16%</span><span>${m(x.iva)}</span></div><div class="g"><span>Total</span><span>${m(x.tot)}</span></div></div>
+<small class="u">Ticket origen: ${esc(x.tk)}</small><small class="u">UUID: ${x.uuid}</small>
+<p class="ok">Factura emitida y enviada a ${esc(f.mail)}.</p></div>
+<div class="acts"><button class="btn sec" onclick="window.print()">Imprimir</button><button class="btn" onclick="nuevo()">Facturar otro ticket</button></div>
+<p class="note">Demo: los tickets son de ejemplo y la factura no tiene validez fiscal. En producción, esta página consulta tu sistema de escritorio y un proveedor de timbrado (PAC) emite el CFDI.</p>`}
+function nuevo(){S.folio="";S.monto="";S.t=null;S.fac=null;S.err={};S.view="tk";render()}
+function render(){steps();$("#app").innerHTML=S.view=="tk"?tk():S.view=="fiscal"?fiscal():fac();window.scrollTo(0,0)}
+render();
+</script>
+</body>
+</html>
